@@ -5,11 +5,11 @@ NAME_SERIAL = Serial
 CPPFLAGS += -g -O3 -std=c++11 
 all: $(NAME_MAT) $(NAME_SERIAL)
 
-#making hw1 program
+#making Serial program : Serial.cpp
 $(NAME_SERIAL): $(NAME_SERIAL).cpp 
 	$(CXX) $(CPP_FLAGS) $^ -o $(NAME_SERIAL) 
 
-#making matrix creation file
+#making matrix creation program : creatrix.cpp
 $(NAME_MAT): $(NAME_MAT).cpp
 	$(CXX) $(CPP_FLAGS) $^ -o $(NAME_MAT)
 
