@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 	fin >> n;
 
 	int** mat = new int*[n];
-	int** tmat = new int[n];
+	int** tmat = new int*[n];
 
 	for (int i = 0; i < n; i++) {
 		mat[i] = new int[n];
@@ -45,6 +45,7 @@ int minimizeRow(int *row, int n, int **tmat, int r) {
 		row[i] -= t;
 		tmat[i][r] = row[i];
 	}
+        return 0;
 }
 
 int printMat(int **mat, int n) {
@@ -54,4 +55,5 @@ int printMat(int **mat, int n) {
 		}
 		cout << endl;
 	}
+        return 0;
 }
