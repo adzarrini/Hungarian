@@ -10,6 +10,9 @@ library(clue)
 ## read in command line args
 ##  first arg should be matrix file name
 ##  second arg should be max or min
+##  third arg should be integer 0 or 1
+##      1 for printing out matrix
+##      0 for no print of matrix
 args = commandArgs(trailingOnly=TRUE)
 
 ## read in file to populate our adjacency matrix
@@ -32,7 +35,8 @@ adj_mat<-matrix(
              nrow=file_mat$n,
              ncol=file_mat$n,
              byrow=TRUE)
-#print(adj_mat)
+
+if (args[3]==1) print(adj_mat)
 
 if (args[2]=='max') maximum<-TRUE
 if (args[2]=='min') maximum<-FALSE
