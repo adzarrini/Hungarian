@@ -14,6 +14,6 @@ example:
 `Rscript check_hungarian.R matrix/test.txt min 0`
 
 To create a bipartite cost matrix in the `./matrix` directory, run:  
-`./creatrix <n> <max-rand-val> <matrix-name (exclude ./matrix in file name)>`  
+`./creatrix <n> <max-rand-val> <random seed> <matrix-name (exclude ./matrix in file name)>`  
 example:  
-`./creatrix 3 9 test.txt`
+`./creatrix 3 9 9999 test.txt`
