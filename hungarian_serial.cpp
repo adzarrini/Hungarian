@@ -3,30 +3,28 @@
 //  edited by Joseph Greshik
 
 #include<iostream>
-#include<assert.h>
 #include<string>
 #include<fstream>
 
-#define N 3 //max number of vertices in one part
 #define INF 100000000 //just infinity
 
-int cost[N][N]; //cost matrix
+int **cost; //cost matrix
 int n, max_match;//n workers and n jobs
-int lx[N], ly[N]; //labels of X and Y parts
-int xy[N]; //xy[x] - vertex that is matched with x,
-int yx[N]; //yx[y] - vertex that is matched with y
-bool S[N], T[N]; //sets S and T in algorithm
-int slack[N]; //as in the algorithm description
-int slackx[N]; //slackx[y] such a vertex, that
+int *lx, *ly; //labels of X and Y parts
+int *xy; //xy[x] - vertex that is matched with x,
+int *yx; //yx[y] - vertex that is matched with y
+bool *S, *T; //sets S and T in algorithm
+int *slack; //as in the algorithm description
+int *slackx; //slackx[y] such a vertex, that
 // l(slackx[y]) + l(y) - w(slackx[y],y) = slack[y]
-int prev[N]; //array for memorizing alternating paths
+int *prev; //array for memorizing alternating paths
 bool verbose=false;
 bool maximum=false;
 
 void init_labels()
 {
-    memset(lx, 0, sizeof(lx));
-    memset(ly, 0, sizeof(ly));
+    memset(lx, 0, sizeof(int)*n);
+    memset(ly, 0, sizeof(int)*n);
     for (int x = 0; x < n; x++)
         for (int y = 0; y < n; y++)
             lx[x] = std::max(lx[x], cost[x][y]);
@@ -65,11 +63,12 @@ void augment() //main function of the algorithm
 {
     if (max_match == n) return; //check wether matching is already perfect
     int x, y, root; //just counters and root vertex
-    int q[N], wr = 0, rd = 0; //q - queue for bfs, wr,rd - write and read
+    int *q, wr = 0, rd = 0; //q - queue for bfs, wr,rd - write and read
+    q = new int[n];
     //pos in queue
-    memset(S, false, sizeof(S)); //init set S
-    memset(T, false, sizeof(T)); //init set T
-    memset(prev, -1, sizeof(prev)); //init set prev - for the alternating tree
+    memset(S, false, sizeof(bool)*n); //init set S
+    memset(T, false, sizeof(bool)*n); //init set T
+    memset(prev, -1, sizeof(int)*n); //init set prev - for the alternating tree
     for (x = 0; x < n; x++) //finding root of the tree
         if (xy[x] == -1)
         {
@@ -148,8 +147,8 @@ int hungarian()
 {
     int ret = 0; //weight of the optimal matching
     max_match = 0; //number of vertices in current matching
-    memset(xy, -1, sizeof(xy));
-    memset(yx, -1, sizeof(yx));
+    memset(xy, -1, sizeof(int)*n);
+    memset(yx, -1, sizeof(int)*n);
     init_labels(); //step 0
     augment(); //steps 1-3
     for (int x = 0; x < n; x++) {//forming answer there
@@ -161,11 +160,12 @@ int hungarian()
 
 void output_assignment()
 {
-    for (int x = 0; x < n; x++){ //forming answer there
-        if (maximum) std::cout<<cost[x][xy[x]]<<" ";
-        else std::cout<<-cost[x][xy[x]]<<" ";
-    }
     std::cout<<std::endl;
+    for (int x = 0; x < n; x++){ //forming answer there
+        if (maximum) std::cout<<cost[x][xy[x]]<<"\t";
+        else std::cout<<-cost[x][xy[x]]<<"\t";
+    }
+    std::cout<<std::endl<<std::endl;
     std::cout<<"Optimal assignment: "<<std::endl;
     for (int x = 0; x < n; x++){ 
         std::cout<<x+1<<" => "<<xy[x]+1;
@@ -178,16 +178,26 @@ void read_in_cost_matrix(char* filename)
 {
     std::ifstream fin (filename);
     fin>>n;
-    assert (n==N);
+
+    cost = new int*[n];
+    lx = new int[n]; ly = new int[n];
+    xy = new int[n];
+    yx = new int[n];
+    S = new bool[n]; T = new bool[n];
+    slack = new int[n];
+    slackx = new int[n];
+    prev = new int[n];
+
     if (verbose) std::cout<<n<<std::endl;
     for(int i=0;i<n;++i){
+        cost[i] = new int[n];
         for(int j=0;j<n;++j){
             fin>>cost[i][j];
             if (!maximum) cost[i][j]=-cost[i][j];
             if (verbose)
             {
-                if(maximum)  std::cout<<cost[i][j]<<" ";
-                else  std::cout<<-cost[i][j]<<" ";
+                if(maximum)  std::cout<<cost[i][j]<<"\t";
+                else  std::cout<<-cost[i][j]<<"\t";
             }
         }
         if (verbose) std::cout<<std::endl;
@@ -197,6 +207,11 @@ void read_in_cost_matrix(char* filename)
 
 int main(int argc, char*argv[])
 {
+    if (argc != 4) {
+        std::cerr << "Arguments must be presented as follows." << std::endl;
+        std::cerr << "./hungarian_serial ./matrix/<matrix-file-name> <max/min> <0/1>" << std::endl;
+        exit(1);
+    }
     //    static const int arr[] = {7,4,2,8,2,3,4,7,1}; 
     verbose=atoi(argv[3]);
     if (std::string(argv[2])=="max") maximum=true;
