@@ -14,4 +14,4 @@ $(NAME_MAT): $(NAME_MAT).cpp
 	$(CXX) $(CPP_FLAGS) $^ -o $(NAME_MAT)
 
 clean:
-	rm $(NAME_MAT) $(NAME_SERIAL) matrix/*.txt
+	rm $(NAME_MAT) $(NAME_SERIAL)
