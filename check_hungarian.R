@@ -27,21 +27,23 @@ processFile = function(filepath) {
         indices[i]<-strtoi(line[1])
     }
     close(con)
+    if(args[3]==1) print(n)
     list(n=n,indices=indices)
 }
 file_mat<-processFile(filepath)
 adj_mat<-matrix(
-             data=file_mat$indices,
-             nrow=file_mat$n,
-             ncol=file_mat$n,
-             byrow=TRUE)
-
-if (args[3]==1) print(adj_mat)
+                data=file_mat$indices,
+                nrow=file_mat$n,
+                ncol=file_mat$n,
+                byrow=TRUE)
 
 if (args[2]=='max') maximum<-TRUE
 if (args[2]=='min') maximum<-FALSE
 
 hungarian<-solve_LSAP(x=adj_mat,maximum=maximum)
-print(hungarian)
+if (args[3]==1) {
+    print(adj_mat)
+    print(adj_mat[cbind(seq_along(hungarian), hungarian)])
+    print(hungarian)
+}
 print(sum(adj_mat[cbind(seq_along(hungarian), hungarian)]))
-print(adj_mat[cbind(seq_along(hungarian), hungarian)])

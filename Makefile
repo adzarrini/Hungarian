@@ -1,6 +1,6 @@
 #executable name
 NAME_MAT = creatrix
-NAME_SERIAL = Serial
+NAME_SERIAL = hungarian_serial
 #flags
 CPPFLAGS += -g -O3 -std=c++11
 all: $(NAME_MAT) $(NAME_SERIAL)
