@@ -6,7 +6,7 @@ To build the project, simply run `make` within the project directory. Call all `
 To run serial implementation, run:  
 `./hungarian_serial ./matrix/<matrix-file-name> <max/min> <0/1>`  
 example:  
-`./hungarian_serial.cpp ./matrix/test.txt max 1`  
+`./hungarian_serial ./matrix/test.txt max 1`  
 
 To check an assignment, use `check_hungarian.R` with the following command:  
 `Rscript check_hungarian.R ./matrix/<matrix-file-name> <max/min> <0/1>`  
