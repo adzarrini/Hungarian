@@ -203,6 +203,7 @@ void read_in_cost_matrix(char* filename)
         if (verbose) std::cout<<std::endl;
     }
     fin.close();
+    std::cout<<"Finished reading input" << std::endl;
 }
 
 int main(int argc, char*argv[])
@@ -216,11 +217,21 @@ int main(int argc, char*argv[])
     verbose=atoi(argv[3]);
     if (std::string(argv[2])=="max") maximum=true;
 
-    read_in_cost_matrix(argv[1]);
+    clock_t start, end;
 
+    start = clock();
+    read_in_cost_matrix(argv[1]);
+    end = clock();
+    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    std::cout << "File IO: " << time_taken << "s" << std::endl;
+
+    start = clock();
     int x=hungarian();    
+    end = clock();
+    time_taken = double(end - start) / double(CLOCKS_PER_SEC);
 
     if (verbose) output_assignment();
 
     std::cout<<x<<std::endl;
+    std::cout<<"Algorithm execution: " << time_taken<<"s"<<std::endl;
 }
