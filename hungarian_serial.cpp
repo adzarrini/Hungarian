@@ -224,7 +224,7 @@ int main(int argc, char*argv[])
     read_in_cost_matrix(argv[1]);
     end = clock();
     double time_io = double(end - start) / double(CLOCKS_PER_SEC);
-    // std::cout << "File IO: " << time_taken << "s" << std::endl;
+    // std::cout << "File IO: " << time_io << "s" << std::endl;
 
     start = clock();
     int x=hungarian();    
@@ -235,5 +235,5 @@ int main(int argc, char*argv[])
 
     // we print out n, matching score, algorithm execution time
     std::cout<<n<<"\t\t"<<x<<"\t\t"<<time_algo<<std::endl;
-    // std::cout<<"Algorithm execution: " << time_taken<<"s"<<std::endl;
+    // std::cout<<"Algorithm execution: " << time_algo<<"s"<<std::endl;
 }
