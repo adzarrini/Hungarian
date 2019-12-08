@@ -4,6 +4,7 @@
 
 #include<iostream>
 #include<string>
+#include <cstring>
 #include<fstream>
 
 #define INF 100000000 //just infinity
@@ -203,7 +204,7 @@ void read_in_cost_matrix(char* filename)
         if (verbose) std::cout<<std::endl;
     }
     fin.close();
-    std::cout<<"Finished reading input" << std::endl;
+    //  std::cout<<"Finished reading input" << std::endl;
 }
 
 int main(int argc, char*argv[])
@@ -213,7 +214,7 @@ int main(int argc, char*argv[])
         std::cerr << "./hungarian_serial ./matrix/<matrix-file-name> <max/min> <0/1>" << std::endl;
         exit(1);
     }
-    //    static const int arr[] = {7,4,2,8,2,3,4,7,1}; 
+    //  static const int arr[] = {7,4,2,8,2,3,4,7,1}; 
     verbose=atoi(argv[3]);
     if (std::string(argv[2])=="max") maximum=true;
 
@@ -222,16 +223,17 @@ int main(int argc, char*argv[])
     start = clock();
     read_in_cost_matrix(argv[1]);
     end = clock();
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-    std::cout << "File IO: " << time_taken << "s" << std::endl;
+    double time_io = double(end - start) / double(CLOCKS_PER_SEC);
+    // std::cout << "File IO: " << time_taken << "s" << std::endl;
 
     start = clock();
     int x=hungarian();    
     end = clock();
-    time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    double time_algo = double(end - start) / double(CLOCKS_PER_SEC);
 
     if (verbose) output_assignment();
 
-    std::cout<<x<<std::endl;
-    std::cout<<"Algorithm execution: " << time_taken<<"s"<<std::endl;
+    // we print out n, matching score, algorithm execution time
+    std::cout<<n<<"\t\t"<<x<<"\t\t"<<time_algo<<std::endl;
+    // std::cout<<"Algorithm execution: " << time_taken<<"s"<<std::endl;
 }
