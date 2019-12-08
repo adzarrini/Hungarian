@@ -2,7 +2,11 @@ make
 matrix_dir=matrix
 data_dir=data
 out_temp=out_temp.txt
-out_file=out.txt
+out_file=${1} # out.txt
+if [ "$out_file" == '' ]
+then
+    out_file=out.txt
+fi
 all_tests=(10 100 500 1000) #2000 3000 4000 5000 10000 15000)
 if [ ! -d "./${data_dir}" ]
 then
