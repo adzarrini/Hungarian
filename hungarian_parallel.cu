@@ -5,30 +5,60 @@
 #include<iostream>
 #include<string>
 #include<fstream>
+#include<cstring>
 
 #define INF 100000000 //just infinity
+#define THREADS_PER_BLOCK 16
 
-int **cost; //cost matrix
+int *cost; //cost matrix
+int *dcost;
+
 int n, max_match;//n workers and n jobs
+int bytes; //bytes dependent on n
+
 int *lx, *ly; //labels of X and Y parts
+int *dlx, *dly;
+
 int *xy; //xy[x] - vertex that is matched with x,
+int *dxy;
 int *yx; //yx[y] - vertex that is matched with y
+int *dyx;
+
 bool *S, *T; //sets S and T in algorithm
+bool *dS, *dT;
+
 int *slack; //as in the algorithm description
+int *dslack;
 int *slackx; //slackx[y] such a vertex, that
+int *dslackx;
 // l(slackx[y]) + l(y) - w(slackx[y],y) = slack[y]
+
 int *prev; //array for memorizing alternating paths
+int *dprev;
+
 bool verbose=false;
 bool maximum=false;
 
-void init_labels()
+__global__ void init_labels(int n, int* lx, int* ly, int *cost) 
 {
-    memset(lx, 0, sizeof(int)*n);
-    memset(ly, 0, sizeof(int)*n);
-    for (int x = 0; x < n; x++)
-        for (int y = 0; y < n; y++)
-            lx[x] = std::max(lx[x], cost[x][y]);
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= n) return;
+
+	lx[x] = 0;
+	ly[x] = 0;
+	for (int y = 0; y < n; y++) 
+		lx[x] = max(lx[x], cost[x*n+y]);
 }
+
+
+//void init_labels()
+//{
+//    memset(lx, 0, sizeof(int)*n);
+//    memset(ly, 0, sizeof(int)*n);
+//    for (int x = 0; x < n; x++)
+//        for (int y = 0; y < n; y++)
+//            lx[x] = std::max(lx[x], cost[x][y]);
+//}
 
 void add_to_tree(int x, int prevx)
     //x - current vertex,prevx - vertex from X before x in the alternating path,
@@ -37,9 +67,9 @@ void add_to_tree(int x, int prevx)
     S[x] = true; //add x to S
     prev[x] = prevx; //we need this when augmenting
     for (int y = 0; y < n; y++) //update slacks, because we add new vertex to S
-        if (lx[x] + ly[y] - cost[x][y] < slack[y])
+        if (lx[x] + ly[y] - cost[x*n+y] < slack[y])
         {
-            slack[y] = lx[x] + ly[y] - cost[x][y];
+            slack[y] = lx[x] + ly[y] - cost[x*n+y];
             slackx[y] = x;
         }
 }
@@ -79,7 +109,7 @@ void augment() //main function of the algorithm
         }
     for (y = 0; y < n; y++) //initializing slack array
     {
-        slack[y] = lx[root] + ly[y] - cost[root][y];
+        slack[y] = lx[root] + ly[y] - cost[root*n+y];
         slackx[y] = root;
     }
     //second part of augment() function
@@ -89,7 +119,7 @@ void augment() //main function of the algorithm
         {
             x = q[rd++]; //current vertex from X part
             for (y = 0; y < n; y++) //iterate through all edges in equality graph
-                if (cost[x][y] == lx[x] + ly[y] && !T[y])
+                if (cost[x*n+y] == lx[x] + ly[y] && !T[y])
                 {
                     if (yx[y] == -1) break; //an exposed vertex in Y found, so
                     //augmenting path exists!
@@ -145,25 +175,48 @@ void augment() //main function of the algorithm
 
 int hungarian()
 {
-    int ret = 0; //weight of the optimal matching
-    max_match = 0; //number of vertices in current matching
-    memset(xy, -1, sizeof(int)*n);
-    memset(yx, -1, sizeof(int)*n);
-    init_labels(); //step 0
-    augment(); //steps 1-3
+	int ret = 0;
+	max_match = 0;
+	
+	memset(xy, -1, bytes);
+	memset(yx, -1, bytes);
+	cudaMemset(dxy, -1, bytes);
+	cudaMemset(dyx, -1, bytes);
+	
+	init_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n, dlx, dly, dcost);
+	
+	cudaMemcpy(dlx, lx, bytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(dly, ly, bytes, cudaMemcpyDeviceToHost);
+
+	augment(); //steps 1-3
     for (int x = 0; x < n; x++) {//forming answer there
-        if (maximum) ret += cost[x][xy[x]];
-        else ret += -cost[x][xy[x]];
+        if (maximum) ret += cost[x*n+xy[x]];
+        else ret += -cost[x*n+xy[x]];
     }
     return ret;
 }
+
+//int hungarian()
+//{
+//    int ret = 0; //weight of the optimal matching
+//    max_match = 0; //number of vertices in current matching
+//    memset(xy, -1, sizeof(int)*n);
+//    memset(yx, -1, sizeof(int)*n);
+//    init_labels(); //step 0
+//    augment(); //steps 1-3
+//    for (int x = 0; x < n; x++) {//forming answer there
+//        if (maximum) ret += cost[x][xy[x]];
+//        else ret += -cost[x][xy[x]];
+//    }
+//    return ret;
+//}
 
 void output_assignment()
 {
     std::cout<<std::endl;
     for (int x = 0; x < n; x++){ //forming answer there
-        if (maximum) std::cout<<cost[x][xy[x]]<<"\t";
-        else std::cout<<-cost[x][xy[x]]<<"\t";
+        if (maximum) std::cout<<cost[x*n+xy[x]]<<"\t";
+        else std::cout<<-cost[x*n+xy[x]]<<"\t";
     }
     std::cout<<std::endl<<std::endl;
     std::cout<<"Optimal assignment: "<<std::endl;
@@ -179,30 +232,47 @@ void read_in_cost_matrix(char* filename)
     std::ifstream fin (filename);
     fin>>n;
 
-    cost = new int*[n];
+	bytes = sizeof(int)*n;
+
+    cost = new int[n*n];
+	cudaMalloc(&dcost, bytes*n);
+
     lx = new int[n]; ly = new int[n];
-    xy = new int[n];
-    yx = new int[n];
+    cudaMalloc(&dlx, bytes); cudaMalloc(&dly, bytes);
+
+	xy = new int[n];
+    cudaMalloc(&dxy, bytes);
+	yx = new int[n];
+	cudaMalloc(&dyx, bytes);
+
     S = new bool[n]; T = new bool[n];
+	cudaMalloc(&dS, sizeof(bool)*n); cudaMalloc(&dT, sizeof(bool)*n);
+
     slack = new int[n];
+	cudaMalloc(&dslack, bytes);
     slackx = new int[n];
-    prev = new int[n];
+	cudaMalloc(&dslackx, bytes);
+
+	prev = new int[n];
+	cudaMalloc(&dprev, bytes);
 
     if (verbose) std::cout<<n<<std::endl;
     for(int i=0;i<n;++i){
-        cost[i] = new int[n];
         for(int j=0;j<n;++j){
-            fin>>cost[i][j];
-            if (!maximum) cost[i][j]=-cost[i][j];
+            fin>>cost[i*n+j];
+            if (!maximum) cost[i*n+j]=-cost[i*n+j];
             if (verbose)
             {
-                if(maximum)  std::cout<<cost[i][j]<<"\t";
-                else  std::cout<<-cost[i][j]<<"\t";
+                if(maximum)  std::cout<<cost[i*n+j]<<"\t";
+                else  std::cout<<-cost[i*n+j]<<"\t";
             }
         }
         if (verbose) std::cout<<std::endl;
     }
     fin.close();
+
+	cudaMemcpy(dcost, cost, bytes*n, cudaMemcpyHostToDevice);
+
     std::cout<<"Finished reading input" << std::endl;
 }
 
@@ -210,7 +280,7 @@ int main(int argc, char*argv[])
 {
     if (argc != 4) {
         std::cerr << "Arguments must be presented as follows." << std::endl;
-        std::cerr << "./hungarian_serial ./matrix/<matrix-file-name> <max/min> <0/1>" << std::endl;
+        std::cerr << "./hungarian_parallel ./matrix/<matrix-file-name> <max/min> <0/1>" << std::endl;
         exit(1);
     }
     //    static const int arr[] = {7,4,2,8,2,3,4,7,1}; 
