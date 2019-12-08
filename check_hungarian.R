@@ -15,6 +15,14 @@ library(clue)
 ##      0 for no print of matrix
 args = commandArgs(trailingOnly=TRUE)
 
+usage = function(){
+    print("Usage:")
+    print("Rscript check_hungarian.R <filename> <max/min> <0/1 (verbose)>")
+    quit()
+}
+
+if ("--help" %in% args || "-h" %in% args) usage()
+
 ## read in file to populate our adjacency matrix
 filepath=args[1]
 processFile = function(filepath) {
