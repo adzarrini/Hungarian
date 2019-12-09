@@ -1,7 +1,7 @@
 #executable name
 NAME_MAT = creatrix
 NAME_SERIAL = hungarian_serial
-NAME_PARALLEL = hungarian_parallel
+NAME_PARALLEL = parallel
 #compiler
 NVCC = nvcc
 #flags
@@ -23,4 +23,4 @@ $(NAME_MAT): $(NAME_MAT).cpp
 	$(CXX) $(CPP_FLAGS) $^ -o $(NAME_MAT)
 
 clean:
-	rm $(NAME_MAT) $(NAME_SERIAL)
+	rm $(NAME_MAT) $(NAME_SERIAL) $(NAME_PARALLEL)
