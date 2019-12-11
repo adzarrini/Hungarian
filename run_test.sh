@@ -7,7 +7,7 @@ if [ "$out_file" == '' ]
 then
     out_file=out.txt
 fi
-all_tests=(10 100 500 1000) #2000 3000 4000 5000 10000 15000)
+all_tests=(10 100 500 1000 2000 3000 4000 5000) #10000 15000)
 if [ ! -d "./${data_dir}" ]
 then
     echo Creating directory ./${data_dir}/
