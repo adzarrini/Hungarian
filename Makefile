@@ -1,7 +1,7 @@
 #executable name
 NAME_MAT = creatrix
 NAME_SERIAL = hungarian_serial
-NAME_PARALLEL = parallel
+NAME_PARALLEL = hungarian_parallel
 #compiler
 NVCC = nvcc
 #flags

@@ -6,18 +6,47 @@ using namespace std;
 bool verbose, maximum;
 
 int n;
-int *C; 			// C matrix (nxn)
-int *Ar, *Ac; 		// assignment arrays
-bool *Vr, *Vc;		// cover arrays
-double *Dr, *Dc;	// dual variable
-double *slack;		// slack array
-int *Pr, *Pc;		// predecessor arrays
-int *Sr, *Sc;		// successor arrays
+int *C; 		// C matrix (nxn)
+int *Ar, *Ac; 	// assignment arrays
+bool *Vr, *Vc;	// cover arrays
+int *Dr, *Dc;	// dual variable
+int *slack;		// slack array
+int *Pr, *Pc;	// predecessor arrays
+int *Sr, *Sc;	// successor arrays
+
+__global__ void initKernalReduc(int n, int *C, int *Dr, int *Dc) 
+{
+	int i = blockIdx.x * blockDim.x + threadIdx.x;	
+	if (i >= n) return;
+	
+	int tmin = 100000000; // very large number
+	for(int j = 0; j < n; j++) {
+		tmin = min(tmin, C[i*n+j]);
+	}
+	Dr[i] = tmin;
+
+	__syncthreads();
+	
+	tmin = 100000000;
+	for (int j = 0; j < n; j+=) {
+		tmin = min(tmin, C[j*n+i] - Dr[j]);
+	}
+	Dc[i] = tmin;
+}
 
 int hungarian() 
 {
-	int max_match = 0;	
+	int max_match = 0;
 
+	int bytes = sizeof(int)*n;
+	
+	int *dC;
+	cudaMalloc(&dC, bytes*n);
+	cudaMemcpy(dC, C, bytes*n, cudaMemcpyHostToDevice); 
+	
+	printCost();
+	
+	
 	
 	return max_match;
 }

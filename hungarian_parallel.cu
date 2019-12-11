@@ -61,98 +61,88 @@ __global__ void init_labels(int n, int* lx, int* ly, int *cost)
 //            lx[x] = std::max(lx[x], cost[x][y]);
 //}
 
-//__device__ void add_to_tree(int x, 
-//							int prevx, 
-//							int n, 
-//							bool* S, 
-//							int* prev, 
-//							int* lx, 
-//							int* ly, 
-//							int* cost, 
-//							int* slack, 
-//							int* slackx)
-//    //x - current vertex,prevx - vertex from X before x in the alternating path,
-//    //so we add edges (prevx, xy[x]), (xy[x], x)
-//{
-//    int y = blockIdx.x * blockDim.x + threadIdx.x;
-//	if (y >= n) return;
-//
-//    //update slacks, because we add new vertex to S
-//    
-//    if (lx[x] + ly[y] - cost[x*n+y] < slack[y])
-//    {
-//        slack[y] = lx[x] + ly[y] - cost[x*n+y];
-//        slackx[y] = x;
-//    }
-//}
-
-void add_to_tree(int x, int prevx)
+__global__ void add_to_tree(int x, 
+							int prevx, 
+							int n, 
+							bool* S, 
+							int* prev, 
+							int* lx, 
+							int* ly, 
+							int* cost, 
+							int* slack, 
+							int* slackx)
     //x - current vertex,prevx - vertex from X before x in the alternating path,
     //so we add edges (prevx, xy[x]), (xy[x], x)
 {
-    S[x] = true; //add x to S
-    prev[x] = prevx; //we need this when augmenting
-    for (int y = 0; y < n; y++) //update slacks, because we add new vertex to S
-        if (lx[x] + ly[y] - cost[x*n+y] < slack[y])
-        {
-            slack[y] = lx[x] + ly[y] - cost[x*n+y];
-            slackx[y] = x;
-        }
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+	if (y >= n) return;
+
+    //update slacks, because we add new vertex to S
+    
+    if (lx[x] + ly[y] - cost[x*n+y] < slack[y])
+    {
+        slack[y] = lx[x] + ly[y] - cost[x*n+y];
+        slackx[y] = x;
+    }
 }
 
-//__global__ void update_labels(int n, 
-//							  bool* T, 
-//							  bool* S, 
-//							  int* lx, 
-//							  int* ly, 
-//							  int* slack)
+//void add_to_tree(int x, int prevx)
+//    //x - current vertex,prevx - vertex from X before x in the alternating path,
+//    //so we add edges (prevx, xy[x]), (xy[x], x)
 //{
-//	int x = blockIdx.x * blockDim.x + threadIdx.x;
-//	if (x >= n) return;
-//
-//	__shared__ int delta;
-//	delta = 100000000;
-//
-//	//calculate delta using slack
-//    if (!T[x])
-//        atomicMin(&delta, slack[x]);
-//    
-//	//update X labels
-//    __syncthreads();
-//
-//	if (S[x]) lx[x] -= delta;
-//	if (T[x]) ly[x] += delta;
-//	else
-//    	slack[x] -= delta;
-//	
+//    S[x] = true; //add x to S
+//    prev[x] = prevx; //we need this when augmenting
+//    for (int y = 0; y < n; y++) //update slacks, because we add new vertex to S
+//        if (lx[x] + ly[y] - cost[x*n+y] < slack[y])
+//        {
+//            slack[y] = lx[x] + ly[y] - cost[x*n+y];
+//            slackx[y] = x;
+//        }
 //}
 
-void update_labels()
+__global__ void update_labels(int n, 
+							  bool* T, 
+							  bool* S, 
+							  int* lx, 
+							  int* ly, 
+							  int* slack)
 {
-    int x, delta = INF; //init delta as infinity
-    for (x = 0; x < n; x++) //calculate delta using slack
-        if (!T[x])
-            delta = std::min(delta, slack[x]);
-    for (x = 0; x < n; x++) //update X labels
-    {
-		if (S[x]) lx[x] -= delta;
-        if (T[x]) ly[x] += delta;
-        else
-            slack[x] -= delta;
-	}
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	if (x >= n) return;
+
+	__shared__ int delta;
+	delta = 100000000;
+
+	//calculate delta using slack
+    if (!T[x])
+        atomicMin(&delta, slack[x]);
+    
+	//update X labels
+    __syncthreads();
+
+	if (S[x]) lx[x] -= delta;
+	if (T[x]) ly[x] += delta;
+	else
+    	slack[x] -= delta;
+	
 }
 
-void augment(int n,
-						int* cost,
-						int* lx,
-						int* ly,
-						int* xy,
-						int* yx,
-						bool* S,
-						bool* T,
-						int* slack,
-						int* slackx,
-						int* prev) //main function of the algorithm
+//void update_labels()
+//{
+//    int x, delta = INF; //init delta as infinity
+//    for (x = 0; x < n; x++) //calculate delta using slack
+//        if (!T[x])
+//            delta = std::min(delta, slack[x]);
+//    for (x = 0; x < n; x++) //update X labels
+//    {
+//		if (S[x]) lx[x] -= delta;
+//        if (T[x]) ly[x] += delta;
+//        else
+//            slack[x] -= delta;
+//	}
+//}
+
+void augment() //Main function of the algorithm
 {
     if (max_match == n) return; //check wether matching is already perfect
     int x, y, root; //just counters and root vertex
@@ -190,44 +180,44 @@ void augment(int n,
                     q[wr++] = yx[y]; //add vertex yx[y], which is matched
                     //with y, to the queue
         			
-					//S[yx[y]] = true; //add x to S
-    				//prev[yx[y]] = x; //we need this when augmenting
-					//
-					//cudaMemcpy(S, dS, sizeof(bool)*n, cudaMemcpyHostToDevice);
-					//cudaMemcpy(prev, dprev, bytes, cudaMemcpyHostToDevice);
-            		//cudaMemcpy(lx, dlx, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(ly, dly, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(cost, dcost, bytes*n, cudaMemcpyHostToDevice);
-					//cudaMemcpy(slack, dslack, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(slackx, dslackx, bytes, cudaMemcpyHostToDevice);
-					//
-					add_to_tree(yx[y], x);
-					//add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], x, n, dS, dprev, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
-    				//cudaMemcpy(dS, S, sizeof(bool)*n, cudaMemcpyDeviceToHost);
-					//cudaMemcpy(dprev, prev, bytes, cudaMemcpyDeviceToHost);
-            		//cudaMemcpy(dlx, lx, bytes, cudaMemcpyDeviceToHost);
-					//cudaMemcpy(dly, ly, bytes, cudaMemcpyDeviceToHost);
-					//cudaMemcpy(dcost, cost, bytes*n, cudaMemcpyDeviceToHost);
-					//cudaMemcpy(dslack, slack, bytes, cudaMemcpyDeviceToHost);
-					//cudaMemcpy(dslackx, slackx, bytes, cudaMemcpyDeviceToHost);
+					S[yx[y]] = true; //add x to S
+    				prev[yx[y]] = x; //we need this when augmenting
+					
+					cudaMemcpy(dS, S, sizeof(bool)*n, cudaMemcpyHostToDevice);
+					cudaMemcpy(dprev, prev, bytes, cudaMemcpyHostToDevice);
+            		cudaMemcpy(dlx, lx, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dly, ly, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dcost, cost, bytes*n, cudaMemcpyHostToDevice);
+					cudaMemcpy(dslack, slack, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dslackx, slackx, bytes, cudaMemcpyHostToDevice);
+					
+					//add_to_tree(yx[y], x);
+					add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], x, n, dS, dprev, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
+    				cudaMemcpy(S, dS, sizeof(bool)*n, cudaMemcpyDeviceToHost);
+					cudaMemcpy(prev, dprev, bytes, cudaMemcpyDeviceToHost);
+            		cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(cost, dcost, bytes*n, cudaMemcpyDeviceToHost);
+					cudaMemcpy(slack, dslack, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(slackx, dslackx, bytes, cudaMemcpyDeviceToHost);
 					
 				}
             if (y < n) break; //augmenting path found!
         }
         if (y < n) break; //augmenting path found!
 		
-		//cudaMemcpy(T, dT, sizeof(bool)*n, cudaMemcpyHostToDevice);
-		//cudaMemcpy(S, dS, sizeof(bool)*n, cudaMemcpyHostToDevice);
-        //cudaMemcpy(lx, dlx, bytes, cudaMemcpyHostToDevice);
-		//cudaMemcpy(ly, dly, bytes, cudaMemcpyHostToDevice);
-		//cudaMemcpy(slack, dslack, bytes, cudaMemcpyHostToDevice);
+		cudaMemcpy(dT, T, sizeof(bool)*n, cudaMemcpyHostToDevice);
+		cudaMemcpy(dS, S, sizeof(bool)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(dlx, lx, bytes, cudaMemcpyHostToDevice);
+		cudaMemcpy(dly, ly, bytes, cudaMemcpyHostToDevice);
+		cudaMemcpy(dslack, slack, bytes, cudaMemcpyHostToDevice);
 
-	  	update_labels();
-		//update_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n,  dT, dS, dlx, dly, dslack); //augmenting path not found, so improve labeling
-        //
-        //cudaMemcpy(dlx, lx, bytes, cudaMemcpyDeviceToHost);
-		//cudaMemcpy(dly, ly, bytes, cudaMemcpyDeviceToHost);
-		//cudaMemcpy(dslack, slack, bytes, cudaMemcpyDeviceToHost);
+	  	//update_labels();
+		update_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n,  dT, dS, dlx, dly, dslack); //augmenting path not found, so improve labeling
+        
+        cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
+		cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
+		cudaMemcpy(slack, dslack, bytes, cudaMemcpyDeviceToHost);
 
 		wr = rd = 0;
         for (y = 0; y < n; y++)
@@ -250,27 +240,27 @@ void augment(int n,
                         q[wr++] = yx[y]; //add vertex yx[y], which is matched with
                         //y, to the queue
                     
-					//S[yx[y]] = true; //add x to S
-    				//prev[yx[y]] = slackx[y]; //we need this when augmenting
-					//
-					//cudaMemcpy(S, dS, sizeof(bool)*n, cudaMemcpyHostToDevice);
-					//cudaMemcpy(prev, dprev, bytes, cudaMemcpyHostToDevice);
-            		//cudaMemcpy(lx, dlx, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(ly, dly, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(cost, dcost, bytes*n, cudaMemcpyHostToDevice);
-					//cudaMemcpy(slack, dslack, bytes, cudaMemcpyHostToDevice);
-					//cudaMemcpy(slackx, dslackx, bytes, cudaMemcpyHostToDevice);
+					S[yx[y]] = true; //add x to S
+    				prev[yx[y]] = slackx[y]; //we need this when augmenting
+					
+					cudaMemcpy(dS, S, sizeof(bool)*n, cudaMemcpyHostToDevice);
+					cudaMemcpy(dprev, prev, bytes, cudaMemcpyHostToDevice);
+            		cudaMemcpy(dlx, lx, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dly, ly, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dcost, cost, bytes*n, cudaMemcpyHostToDevice);
+					cudaMemcpy(dslack, slack, bytes, cudaMemcpyHostToDevice);
+					cudaMemcpy(dslackx, slackx, bytes, cudaMemcpyHostToDevice);
 
-					add_to_tree(yx[y],slackx[y]);
-                    //add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], slackx[y], n, dS, dprev, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
-                    //    //yx[y]) to the tree
-                 	//cudaMemcpy(dS, S, sizeof(bool)*n, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dprev, prev, bytes, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dlx, lx, bytes, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dly, ly, bytes, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dcost, cost, bytes*n, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dslack, slack, bytes, cudaMemcpyDeviceToHost);
-                 	//cudaMemcpy(dslackx, slackx, bytes, cudaMemcpyDeviceToHost);
+					//add_to_tree(yx[y],slackx[y]);
+                    add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], slackx[y], n, dS, dprev, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
+                        //yx[y]) to the tree
+    				cudaMemcpy(S, dS, sizeof(bool)*n, cudaMemcpyDeviceToHost);
+					cudaMemcpy(prev, dprev, bytes, cudaMemcpyDeviceToHost);
+            		cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(cost, dcost, bytes*n, cudaMemcpyDeviceToHost);
+					cudaMemcpy(slack, dslack, bytes, cudaMemcpyDeviceToHost);
+					cudaMemcpy(slackx, dslackx, bytes, cudaMemcpyDeviceToHost);
 
 					}
                 }
@@ -303,8 +293,8 @@ int hungarian()
 	
 	init_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n, dlx, dly, dcost);
 	
-	cudaMemcpy(dlx, lx, bytes, cudaMemcpyDeviceToHost);
-	cudaMemcpy(dly, ly, bytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
 
 	augment(); //steps 1-3
     for (int x = 0; x < n; x++) {//forming answer there
