@@ -37,6 +37,8 @@ int *prev; //array for memorizing alternating paths
 bool verbose=false;
 bool maximum=false;
 
+int maxi = 0;
+
 __global__ void init_labels(int n, int* lx, int* ly, int *cost) 
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -265,34 +267,20 @@ int hungarian()
 	cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
 
 	augment(); //steps 1-3
+
     for (int x = 0; x < n; x++) {//forming answer there
         if (maximum) ret += cost[x*n+xy[x]];
-        else ret += -cost[x*n+xy[x]];
+        else ret += maxi-cost[x*n+xy[x]];
     }
     return ret;
 }
-
-//int hungarian()
-//{
-//    int ret = 0; //weight of the optimal matching
-//    max_match = 0; //number of vertices in current matching
-//    memset(xy, -1, sizeof(int)*n);
-//    memset(yx, -1, sizeof(int)*n);
-//    init_labels(); //step 0
-//    augment(); //steps 1-3
-//    for (int x = 0; x < n; x++) {//forming answer there
-//        if (maximum) ret += cost[x][xy[x]];
-//        else ret += -cost[x][xy[x]];
-//    }
-//    return ret;
-//}
 
 void output_assignment()
 {
     std::cout<<std::endl;
     for (int x = 0; x < n; x++){ //forming answer there
         if (maximum) std::cout<<cost[x*n+xy[x]]<<"\t";
-        else std::cout<<-cost[x*n+xy[x]]<<"\t";
+        else std::cout<<maxi-cost[x*n+xy[x]]<<"\t";
     }
     std::cout<<std::endl<<std::endl;
     std::cout<<"Optimal assignment: "<<std::endl;
@@ -333,14 +321,24 @@ void read_in_cost_matrix(char* filename)
     for(int i=0;i<n;++i){
         for(int j=0;j<n;++j){
             fin>>cost[i*n+j];
-            if (!maximum) cost[i*n+j]=-cost[i*n+j];
-            if (verbose)
-            {
-                if(maximum)  std::cout<<cost[i*n+j]<<"\t";
-                else  std::cout<<-cost[i*n+j]<<"\t";
+            if (verbose&&maximum)   std::cout<<cost[i*n+j]<<"\t";
+        }
+        if (verbose&&maximum) std::cout<<std::endl;
+    }
+    //* NEW MIN FUNCTION
+    if(!maximum){
+        for(int i=0;i<n;++i){
+            for(int j=0;j<n;++j){
+                if (cost[i*n+j]>maxi) maxi = cost[i*n+j];
             }
         }
-        if (verbose) std::cout<<std::endl;
+        for(int i=0;i<n;++i){
+            for(int j=0;j<n;++j){
+                if(verbose) std::cout<<cost[i*n+j]<<"\t";
+                cost[i*n+j] = maxi - cost[i*n+j];
+            }
+            if(verbose) std::cout<<std::endl;
+        }
     }
     fin.close();
 
@@ -362,11 +360,11 @@ int main(int argc, char*argv[])
 
     clock_t start, end;
 
-    start = clock();
+    //  start = clock();
     read_in_cost_matrix(argv[1]);
-    end = clock();
-    double time_io = double(end - start) / double(CLOCKS_PER_SEC);
-    // std::cout << "File IO: " << time_io << "s" << std::endl;
+    //  end = clock();
+    //  double time_io = double(end - start) / double(CLOCKS_PER_SEC);
+    //  std::cout << "File IO: " << time_io << "s" << std::endl;
 
     start = clock();
     int x=hungarian();    
