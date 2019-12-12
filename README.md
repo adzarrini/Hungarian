@@ -23,10 +23,10 @@ example:
 To create a bipartite cost matrix in the `./matrix` directory, run:  
 ```./creatrix <n> <max-rand-val> <random seed> <matrix-name (exclude ./matrix in file name)>```  
 example:  
-```./creatrix 3 9 1234 test.txt```
+```./creatrix 3 9 9999 test.txt```
 
 To run a series of tests for matrices, run:  
 ```bash run_test.sh <do_serial (0/1)> <max/min> <random seed (int)> <out filename>```  
 example:  
-```bash run_test.sh 1 max 1234 out_file.txt```  
+```bash run_test.sh 1 max 9999 out_file.txt```  
 Output will be in `data/out_file.txt`. 
