@@ -6,6 +6,7 @@
 #include<string>
 #include <cstring>
 #include<fstream>
+#include<ostream>
 
 #define INF 100000000 //just infinity
 
@@ -21,6 +22,7 @@ int *slackx; //slackx[y] such a vertex, that
 int *prev; //array for memorizing alternating paths
 bool verbose=false;
 bool maximum=false;
+int maxi=0;
 
 void init_labels()
 {
@@ -152,9 +154,10 @@ int hungarian()
     memset(yx, -1, sizeof(int)*n);
     init_labels(); //step 0
     augment(); //steps 1-3
+
     for (int x = 0; x < n; x++) {//forming answer there
         if (maximum) ret += cost[x][xy[x]];
-        else ret += -cost[x][xy[x]];
+        else ret += maxi-cost[x][xy[x]];
     }
     return ret;
 }
@@ -164,7 +167,7 @@ void output_assignment()
     std::cout<<std::endl;
     for (int x = 0; x < n; x++){ //forming answer there
         if (maximum) std::cout<<cost[x][xy[x]]<<"\t";
-        else std::cout<<-cost[x][xy[x]]<<"\t";
+        else std::cout<<maxi-cost[x][xy[x]]<<"\t";
     }
     std::cout<<std::endl<<std::endl;
     std::cout<<"Optimal assignment: "<<std::endl;
@@ -194,14 +197,24 @@ void read_in_cost_matrix(char* filename)
         cost[i] = new int[n];
         for(int j=0;j<n;++j){
             fin>>cost[i][j];
-            if (!maximum) cost[i][j]=-cost[i][j];
-            if (verbose)
-            {
-                if(maximum)  std::cout<<cost[i][j]<<"\t";
-                else  std::cout<<-cost[i][j]<<"\t";
+            if (verbose&&maximum)   std::cout<<cost[i][j]<<"\t";
+        }
+        if (verbose&&maximum) std::cout<<std::endl;
+    }
+    //* NEW MIN FUNCTION
+    if(!maximum){
+        for(int i=0;i<n;++i){
+            for(int j=0;j<n;++j){
+                if (cost[i][j]>maxi) maxi = cost[i][j];
             }
         }
-        if (verbose) std::cout<<std::endl;
+        for(int i=0;i<n;++i){
+            for(int j=0;j<n;++j){
+                if(verbose) std::cout<<cost[i][j]<<"\t";
+                cost[i][j] = maxi - cost[i][j];
+            }
+        if(verbose) std::cout<<std::endl;
+        }
     }
     fin.close();
     //  std::cout<<"Finished reading input" << std::endl;
@@ -220,11 +233,11 @@ int main(int argc, char*argv[])
 
     clock_t start, end;
 
-    start = clock();
+    //  start = clock();
     read_in_cost_matrix(argv[1]);
-    end = clock();
-    double time_io = double(end - start) / double(CLOCKS_PER_SEC);
-    // std::cout << "File IO: " << time_io << "s" << std::endl;
+    //  end = clock();
+    //  double time_io = double(end - start) / double(CLOCKS_PER_SEC);
+    //  std::cout << "File IO: " << time_io << "s" << std::endl;
 
     start = clock();
     int x=hungarian();    
