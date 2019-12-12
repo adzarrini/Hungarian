@@ -29,7 +29,7 @@ do
     if [ ! $(find "./${matrix_dir}" -name "$name") ]
     then
         echo Creating matrix ./${matrix_dir}/$name
-        ./creatrix $i 9 1234 ${name}
+        ./creatrix $i 9 ${random_seed} ${name}
     fi
     cpu_out=''
     if [ "$do_serial" == 1 ]
