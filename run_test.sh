@@ -2,14 +2,15 @@ make
 matrix_dir=matrix
 data_dir=data
 out_temp=out_temp.txt
-out_file=${3}           # out.txt default
 do_serial=${1}          # 0 for no serial computation 1 for yes do serial computation
 maxmin=${2}             # max or min
+random_seed=${3}        # random seed to create matrices with
+out_file=${4}           # out.txt default
 if [ "$out_file" == '' ]
 then
     out_file=out.txt
 fi
-all_tests=(10 100 500 1000 2000 3000) #4000 5000 7500 10000 12500 15000 17500 20000)
+all_tests=(10 100 500 1000 2000 3000 4000 5000 7500 10000 12500 15000 17500 20000)
 if [ ! -d "./${data_dir}" ]
 then
     echo Creating directory ./${data_dir}/
