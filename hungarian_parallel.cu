@@ -10,12 +10,14 @@
 
 #define INF 100000000 //just infinity
 #define THREADS_PER_BLOCK 32
+#define BLOCK_SIZE(a) (a < 1) ? 1 : a
+
 
 int *cost; //cost matrix
 int *dcost;
 
 int n, max_match;//n workers and n jobs
-int bytes; //bytes dependent on n
+int bytes, blocks; //bytes dependent on n
 
 int *lx, *ly; //labels of X and Y parts
 int *dlx, *dly;
@@ -184,7 +186,7 @@ void augment() //Main function of the algorithm
     				prev[yx[y]] = x; //we need this when augmenting
 					
 					//add_to_tree(yx[y], x);
-					add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], x, n, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
+					add_to_tree<<<blocks, THREADS_PER_BLOCK>>>(yx[y], x, n, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
 					
 					
 				}
@@ -197,7 +199,7 @@ void augment() //Main function of the algorithm
 		cudaMemcpy(dslack, slack, bytes, cudaMemcpyHostToDevice);
 	  	
 		//update_labels();
-		update_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n,  dT, dS, dlx, dly, dslack); //augmenting path not found, so improve labeling
+		update_labels<<<blocks, THREADS_PER_BLOCK>>>(n,  dT, dS, dlx, dly, dslack); //augmenting path not found, so improve labeling
         
         cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
 		cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
@@ -229,7 +231,7 @@ void augment() //Main function of the algorithm
     				prev[yx[y]] = slackx[y]; //we need this when augmenting
 					
 					//add_to_tree(yx[y],slackx[y]);
-                    add_to_tree<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(yx[y], slackx[y], n, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
+                    add_to_tree<<<blocks, THREADS_PER_BLOCK>>>(yx[y], slackx[y], n, dlx, dly, dcost, dslack, dslackx); //add edges (x,y) and (y,yx[y]) to the tree
                         //yx[y]) to the tree
 					cudaMemcpy(slack, dslack, bytes, cudaMemcpyDeviceToHost);
 					cudaMemcpy(slackx, dslackx, bytes, cudaMemcpyDeviceToHost);
@@ -261,7 +263,7 @@ int hungarian()
 	memset(xy, -1, bytes);
 	memset(yx, -1, bytes);
 	
-	init_labels<<<bytes/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(n, dlx, dly, dcost);
+	init_labels<<<blocks, THREADS_PER_BLOCK>>>(n, dlx, dly, dcost);
 	
 	cudaMemcpy(lx, dlx, bytes, cudaMemcpyDeviceToHost);
 	cudaMemcpy(ly, dly, bytes, cudaMemcpyDeviceToHost);
@@ -297,6 +299,7 @@ void read_in_cost_matrix(char* filename)
     fin>>n;
 
 	bytes = sizeof(int)*n;
+	blocks = BLOCK_SIZE(bytes / THREADS_PER_BLOCK); 
 
     cost = new int[n*n];
 	cudaMalloc(&dcost, bytes*n);
